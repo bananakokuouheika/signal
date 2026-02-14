@@ -1,52 +1,123 @@
-// public/sw.js (エラー回避・保険付き)
+// public/sw.js
 
-// ★ここにあなたのXServerのURLを正確に入れてください
-// 末尾の ?url= を忘れずに！
+
+
+// ★あなたのXServerのプロキシURL (変更不要)
+
 const PROXY_BASE = "https://atoshin.com/phpproxy.php?url=";
 
-self.addEventListener('fetch', (event) => {
-  const requestUrl = new URL(event.request.url);
 
-  // 1. 自分自身(Netlify)へのアクセスは無視
-  if (requestUrl.origin === location.origin) {
-    return;
-  }
 
-  // 2. すでにプロキシ経由のリクエストなら無視（無限ループ防止）
-  if (requestUrl.href.startsWith(PROXY_BASE)) {
-    return;
-  }
-
-  // 3. 外部へのアクセスをプロキシ経由に書き換え
-  const targetUrl = PROXY_BASE + encodeURIComponent(event.request.url);
-
-  event.respondWith(
-    fetch(targetUrl, {
-      method: event.request.method,
-      headers: event.request.headers,
-      mode: 'cors',
-      credentials: 'omit'
-    })
-    .then(response => {
-      // プロキシが正常(200番台)ならそれを返す
-      if (response.ok) return response;
-      // プロキシがエラー(404や500)を返したら、例外を投げて下のcatchへ
-      throw new Error('Proxy returned error');
-    })
-    .catch(() => {
-      // ★保険：プロキシがダメだった場合、元のURLに直接アクセスを試みる
-      // (CORSエラーになるかもしれないが、アプリごと落ちるよりはマシ)
-      console.warn('Proxy failed, falling back to direct fetch:', event.request.url);
-      return fetch(event.request);
-    })
-  );
-});
-
-// インストール時の処理
 self.addEventListener('install', (event) => {
-  self.skipWaiting();
+
+  self.skipWaiting(); // すぐに有効化
+
 });
+
+
 
 self.addEventListener('activate', (event) => {
-  event.waitUntil(self.clients.claim());
+
+  event.waitUntil(self.clients.claim()); // すぐにコントロール開始
+
+});
+
+
+
+self.addEventListener('fetch', (event) => {
+
+  const requestUrl = new URL(event.request.url);
+
+
+
+  // 1. 自分自身(Netlify)へのアクセスは何もしない
+
+  if (requestUrl.origin === location.origin) {
+
+    return;
+
+  }
+
+
+
+  // 2. すでにプロキシ経由になっているものも何もしない
+
+  if (requestUrl.href.includes("phpproxy.php")) {
+
+    return;
+
+  }
+
+
+
+  // 3. 【ここが重要】サウンドフォント(.sf2)を見つけたら、絶対にプロキシを通す！
+
+  //    (ファイル名に .sf2 が含まれているかチェック)
+
+  if (requestUrl.pathname.endsWith('.sf2')) {
+
+    
+
+    // 元のURLをプロキシURLで包む
+
+    const newUrl = PROXY_BASE + encodeURIComponent(event.request.url);
+
+    
+
+    // コンソールにログを出す(デバッグ用)
+
+    console.log(`[SW] Redirecting SF2 via Proxy: ${newUrl}`);
+
+
+
+    event.respondWith(
+
+      fetch(newUrl, {
+
+        method: 'GET',
+
+        mode: 'cors',
+
+        credentials: 'omit'
+
+      })
+
+      .then(response => {
+
+        if (!response.ok) throw new Error('Proxy error: ' + response.status);
+
+        return response;
+
+      })
+
+      .catch(err => {
+
+        console.error('[SW] Proxy failed, fallback to direct:', err);
+
+        // プロキシがダメなら一か八か直接取りに行く(保険)
+
+        return fetch(event.request);
+
+      })
+
+    );
+
+    return; // ここで処理終了
+
+  }
+
+
+
+  // 4. それ以外の外部通信も、念のためプロキシを通す設定にする場合
+
+  // (もし他のAPIもCORSエラーが出るならここも通す)
+
+  /*
+
+  const newUrl = PROXY_BASE + encodeURIComponent(event.request.url);
+
+  event.respondWith(fetch(newUrl, { mode: 'cors' }));
+
+  */
+
 });
