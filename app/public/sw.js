@@ -2,7 +2,7 @@
 
 // ★ここにあなたのXServerのURLを正確に入れてください
 // 末尾の ?url= を忘れずに！
-const PROXY_BASE = "https://signal.atoshin.com/proxy.php?url=";
+const PROXY_BASE = "https://atoshin.com/phpproxy.php?url=";
 
 self.addEventListener('fetch', (event) => {
   const requestUrl = new URL(event.request.url);
