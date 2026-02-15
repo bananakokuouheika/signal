@@ -51,7 +51,7 @@ const setupSynthIfNeeded = async (synth: SoundFontSynth) => {
   }
   await synth.setup()
   const soundFont = await SoundFont.loadFromURL(
-    "https://atoshin.com/phpproxy.php?url=https://cdn.jsdelivr.net/gh/ryohey/signal@4569a31/public/A320U.sf2",
+    "https://atoshin.com/A320U.sf2",
   )
   await synth.loadSoundFont(soundFont)
 }
